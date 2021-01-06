@@ -23,3 +23,11 @@ ec2rds : vpc + APM 설치된 ec2 + 다중 가용 영역 RDS (for MySQL)
 -- images의 ec2rds-modified 참고
 
 ***
+
+iam-user : AdministratorAccess 정책 적용한 User 생성
+
+iam-user-policy : AdministratorAccess 정책 적용한 Policy를 만들어 User에 적용
+
+***
+
+자세한 정리 : </http://honglab.tistory.com/category/공부/AWS>
