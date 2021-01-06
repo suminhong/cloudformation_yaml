@@ -4,7 +4,7 @@ vpc : 기본 vpc 구성
 
 vpc-parameter : 파라미터를 사용한 기본 vpc 구성
 
-images의 vpc 참고
+-- images의 vpc 참고
 
 ***
 
