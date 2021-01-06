@@ -30,4 +30,4 @@ iam-user-policy : AdministratorAccess 정책 적용한 Policy를 만들어 User�
 
 ***
 
-자세한 정리 : </http://honglab.tistory.com/category/공부/AWS/>
+자세한 정리 : <http://honglab.tistory.com/category/공부/AWS>
