@@ -1,0 +1,245 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: VPC + EC2 + RDS
+
+Mappings:
+  RegionMap: 
+    us-east-1:
+      Linux2: ami-0be2609ba883822ec
+    us-east-2:
+      Linux2: ami-0a0ad6b70e61be944
+    us-west-1:
+      Linux2: ami-03130878b60947df3
+    us-west-2:
+      Linux2: ami-0a36eb8fadc976275
+    ap-northeast-1:
+      Linux2: ami-01748a72bed07727c
+    ap-northeast-2:
+      Linux2: ami-0094965d55b3bb1ff
+
+Parameters:
+  KeyName:
+    Description: Name of KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+
+  AZpublic:
+    Description: AvailabilityZone for public
+    Type: AWS::EC2::AvailabilityZone::Name
+  AZprivate1:
+    Description: AvailabilityZone for private
+    Type: AWS::EC2::AvailabilityZone::Name
+  AZprivate2:
+    Description: AvailabilityZone for private
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  VPCCidr:
+    Description: Cidr Block for VPC
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetCidr:
+    Description: Cidr Block for Public Subnet
+    Type: String
+    Default: 10.0.0.0/24
+  PrivateSubnet1Cidr:
+    Description: Cidr Block for Private Subnet 1
+    Type: String
+    Default: 10.0.10.0/24
+  PrivateSubnet2Cidr:
+    Description: Cidr Block for Private Subnet 2
+    Type: String
+    Default: 10.0.20.0/24
+
+  DBInstanceID:
+    Default: dbinstance
+    Description: Database Instance Name
+    Type: String
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter, Contain Only alphanumeric
+  DBName:
+    Default: db1
+    Description: Database Name
+    Type: String
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter, Contain Only alphanumeric
+  DBInstanceClass:
+    Default: db.m5.large
+    Description: DB instance class
+    Type: String
+    ConstraintDescription: Must select a valid DB instance type
+  DBUsername:
+    NoEcho: true
+    Description: Username for DB Access
+    Type: String
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter, Contain Only alphanumeric
+  DBPassword:
+    NoEcho: true
+    Description: Password for DB Access
+    Type: String
+    MinLength: 8
+    MaxLength: 40
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Contain Only alphanumeric
+  DBAllocatedStorage:
+    Default: 50
+    Description: Size of Database (GiB)
+    Type: Number
+    MinValue: 5
+    MaxValue: 1024
+    ConstraintDescription: between 20 and 65536 GiB
+
+
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCidr
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: myVPC
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetCidr
+      AvailabilityZone: !Ref AZpublic
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: public subnet
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Ref AZprivate1
+      Tags:
+        - Key: Name
+          Value: private subnet 1
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone: !Ref AZprivate2
+      Tags:
+        - Key: Name
+          Value: private subnet 2
+
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: myigw
+  Attachigw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Public RT
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: Attachigw
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRT
+      SubnetId: !Ref PublicSubnet
+
+  SGforWeb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow 22, 80
+      GroupName: webaccess
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC
+  SGforDB:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow webserver
+      GroupName: dbaccess
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          SourceSecurityGroupId : !GetAtt SGforWeb.GroupId
+      VpcId: !Ref VPC
+
+  EC2forWeb:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", Linux2 ]
+      KeyName: !Ref KeyName
+      AvailabilityZone: !GetAtt PublicSubnet.AvailabilityZone
+      InstanceType: t3.micro
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds:
+        - !Ref SGforWeb
+      UserData:
+        Fn::Base64:
+          !Join [ "", [
+          "#!/bin/bash\n",
+          "#Install APM for Web Server\n",
+          "yum install -y mariadb* php httpd php-mysql\n",
+          "systemctl enable httpd mariadb\n",
+          "systemctl start httpd mariadb\n"] ]
+      Tags:
+        - Key: Name
+          Value: Web Server
+
+  SubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: SubnetGroup for MySQL RDS
+      DBSubnetGroupName: mySubnetGroup
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+  RDSSecurityGroup:
+    Type: AWS::RDS::DBSecurityGroup
+    Properties:
+      DBSecurityIngress:
+        - EC2SecurityGroupId: !Ref SGforDB
+      EC2VpcId: !Ref VPC
+      GroupDescription: SecurityGroup for RDS
+  RDS:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceID
+      DBName: !Ref DBName
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: MySQL
+      EngineVersion: 8.0.20
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      AllocatedStorage: !Ref DBAllocatedStorage
+      DBSubnetGroupName: !Ref SubnetGroup
+      DBSecurityGroups:
+        - !Ref RDSSecurityGroup
