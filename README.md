@@ -1,5 +1,7 @@
 # cloudformation 실습 - yaml 사용
 
+***
+
 vpc : 기본 vpc 구성
 
 vpc-parameter : 파라미터를 사용한 기본 vpc 구성
@@ -19,3 +21,5 @@ ec2-mapping-simple : Linux2만 사용할 앞으로의 실습을 위해 최대한
 ec2rds : vpc + APM 설치된 ec2 + 다중 가용 영역 RDS (for MySQL)
 
 -- images의 ec2rds-modified 참고
+
+***
