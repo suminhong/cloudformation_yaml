@@ -2,14 +2,38 @@ AWSTemplateFormatVersion: "2010-09-09"
 
 Description: EC2 for webserver
 
+Mappings:
+  RegionMap: 
+    us-east-1:
+      Linux2: ami-0be2609ba883822ec
+      Window2019: ami-0229f7666f517b31e
+    us-east-2:
+      Linux2: ami-0a0ad6b70e61be944
+      Window2019: ami-0d5b55fd8cd8738f5
+    us-west-1:
+      Linux2: ami-03130878b60947df3
+      Window2019: ami-0ae930fa924b34ed3
+    us-west-2:
+      Linux2: ami-0a36eb8fadc976275
+      Window2019: ami-0706901be27b0d22b
+    ap-northeast-1:
+      Linux2: ami-01748a72bed07727c
+      Window2019: ami-014612c2d9afaf1ac
+    ap-northeast-2:
+      Linux2: ami-0094965d55b3bb1ff
+      Window2019: ami-02e14cbf0d1fa141a
+
 Parameters:
   KeyName:
     Description: Name of KeyPair
     Type: AWS::EC2::KeyPair::KeyName
   AMI:
     Description: AMI of EC2
-    Type: AWS::EC2::Image::Id
-    Default: ami-0094965d55b3bb1ff
+    Type: String
+    Default: Linux2
+    AllowedValues:
+      - Linux2
+      - Window2019
 
   AZpublic:
     Description: AvailabilityZone for public
@@ -122,7 +146,7 @@ Resources:
   EC2forWeb:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref AMI
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", !Ref AMI ]
       KeyName: !Ref KeyName
       AvailabilityZone: !GetAtt PublicSubnet.AvailabilityZone
       InstanceType: t3.micro
