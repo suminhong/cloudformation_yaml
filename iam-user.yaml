@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: IAM User
+
+Resources:
+  AdminUser:
+    Type: AWS::IAM::User
+    Properties:
+      LoginProfile:
+        Password: P@ssw0rd
+      Policies:
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: '*'
+                Resource: '*'
+          PolicyName: Admin
+      UserName: Admin1
