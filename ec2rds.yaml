@@ -222,13 +222,6 @@ Resources:
       SubnetIds:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
-  RDSSecurityGroup:
-    Type: AWS::RDS::DBSecurityGroup
-    Properties:
-      DBSecurityIngress:
-        - EC2SecurityGroupId: !Ref SGforDB
-      EC2VpcId: !Ref VPC
-      GroupDescription: SecurityGroup for RDS
   RDS:
     Type: AWS::RDS::DBInstance
     Properties:
@@ -241,5 +234,5 @@ Resources:
       MasterUserPassword: !Ref DBPassword
       AllocatedStorage: !Ref DBAllocatedStorage
       DBSubnetGroupName: !Ref SubnetGroup
-      DBSecurityGroups:
-        - !Ref RDSSecurityGroup
+      VPCSecurityGroups:
+        - !Ref SGforDB
