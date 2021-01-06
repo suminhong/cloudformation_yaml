@@ -69,9 +69,13 @@ Parameters:
     Default: db.m5.large
     Description: DB instance class
     Type: String
-    ConstraintDescription: Must select a valid DB instance type
+    AllowedValues:
+      - db.m5.large
+      - db.m5.xlarge
+      - db.m5.2xlarge
+      - db.m5.4xlarge
+      - db.m5.8xlarge
   DBUsername:
-    NoEcho: true
     Description: Username for DB Access
     Type: String
     MinLength: 1
