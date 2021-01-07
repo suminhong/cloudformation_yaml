@@ -30,4 +30,10 @@ iam-user-policy : AdministratorAccess 정책 적용한 Policy를 만들어 User�
 
 ***
 
+vpcforASG : Auto Scaling Group 하기 위한 vpc 구성
+
+-- images의 vpc-asg 참고
+
+***
+
 자세한 정리 : <http://honglab.tistory.com/category/공부/AWS>
