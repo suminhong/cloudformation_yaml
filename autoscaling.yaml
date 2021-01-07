@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: EC2 for webserver
+
+Parameters:
+  Key:
+    Description: KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+  
+  VPC:
+    Description: VPC
+    Type: AWS::EC2::VPC::Id
+
+  AZ:
+    Description: AZ
+    Type: AWS::EC2::AvailabilityZone::Name
+
+  WebSG:
+    Description: SG - Access 22, 80
+    Type: AWS::EC2::SecurityGroup::Id
+
+
+Resources:
+  LC:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId:
+      InstanceType: t3.micro
+      KeyName: !Ref Key
+      LaunchConfigurationName: myLC
+      SecurityGroups:
+        - !Ref WebSG
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: myALB
+      Type: application
+
+
+  ASG:
+    Type: AWS::AUtoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: myASG
+      AvailabilityZones:
+        - !Ref AZ
+      HealthChsckGracePeriod:
+      LaunchConfigurationName: !Ref LC
+      MaxSize: 4
+      MinSize: 2
