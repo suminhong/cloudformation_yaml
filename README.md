@@ -34,6 +34,10 @@ vpcforASG : Auto Scaling Group 하기 위한 vpc 구성
 
 -- images의 vpc-asg 참고
 
+autoscaling : launch configuration + application load balancer + target group + listener + autoscaling group + asg policy(CPU)
+
+-- images의 asg 
+
 ***
 
 자세한 정리 : <http://honglab.tistory.com/category/공부/AWS>
