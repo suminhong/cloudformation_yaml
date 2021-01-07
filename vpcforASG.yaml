@@ -161,10 +161,11 @@ Resources:
         Fn::Base64:
           !Join [ "", [
           "#!/bin/bash\n",
-          "#Install APM for Web Server\n",
-          "yum install -y mariadb* php httpd php-mysql\n",
-          "systemctl enable httpd mariadb\n",
-          "systemctl start httpd mariadb\n"] ]
+          "#Install apache\n",
+          "yum install -y httpd\n",
+          "systemctl enable httpd\n",
+          "echo '<h1>Auto Scaling Group Test</h1>' > /var/www/html/index.html\n",
+          "systemctl start httpd\n"] ]
       Tags:
         - Key: Name
           Value: Web Server
