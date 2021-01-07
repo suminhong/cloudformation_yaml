@@ -11,40 +11,95 @@ Parameters:
     Description: VPC
     Type: AWS::EC2::VPC::Id
 
-  AZ:
-    Description: AZ
-    Type: AWS::EC2::AvailabilityZone::Name
-
   WebSG:
-    Description: SG - Access 22, 80
+    Description: SG for Web Server
     Type: AWS::EC2::SecurityGroup::Id
+  
+  PublicSubnet1:
+    Description: public 1
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2:
+    Description: public 2
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet1:
+    Description: private 1
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2:
+    Description: private 2
+    Type: AWS::EC2::Subnet::Id
 
 
 Resources:
   LC:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId:
+      ImageId: ami-086fa81c7ad211233
       InstanceType: t3.micro
       KeyName: !Ref Key
-      LaunchConfigurationName: myLC
+      LaunchConfigurationName: webserverLC
       SecurityGroups:
         - !Ref WebSG
 
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: myALB
+      Name: webserverALB
       Type: application
+      SecurityGroups:
+        - !Ref WebSG
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
 
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: webtest
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup   
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
 
   ASG:
-    Type: AWS::AUtoScaling::AutoScalingGroup
+    Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AutoScalingGroupName: myASG
-      AvailabilityZones:
-        - !Ref AZ
-      HealthChsckGracePeriod:
+      AutoScalingGroupName: webserverASG
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Cooldown: 300
       LaunchConfigurationName: !Ref LC
       MaxSize: 4
       MinSize: 2
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      Tags:
+        - Key: Name
+          Value: web-asg
+          PropagateAtLaunch: true
+
+  ASGPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ASG
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 45
