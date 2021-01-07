@@ -87,6 +87,7 @@ Resources:
       LaunchConfigurationName: !Ref LC
       MaxSize: 4
       MinSize: 2
+      DesiredCapacity: 2
       TargetGroupARNs:
         - !Ref TargetGroup
       Tags:
@@ -102,4 +103,4 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 45
+        TargetValue: 5
