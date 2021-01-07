@@ -33,7 +33,7 @@ Resources:
   LC:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-086fa81c7ad211233
+      ImageId: ami-07d74f284ab378ced
       InstanceType: t3.micro
       KeyName: !Ref Key
       LaunchConfigurationName: webserverLC
