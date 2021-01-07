@@ -30,11 +30,9 @@ iam-user-policy : AdministratorAccess 정책 적용한 Policy를 만들어 User�
 
 ***
 
-vpcforASG : Auto Scaling Group 하기 위한 vpc 구성
+vpcforASG : Auto Scaling Group 시작하기 전 vpc, ec2 구성
 
--- images의 vpc-asg 참고
-
-autoscaling : launch configuration + application load balancer + target group + listener + autoscaling group + asg policy(CPU)
+autoscaling : LC + ALB + target group + listener + ASG + ASG policy(CPU)
 
 -- images의 asg 참고
 
