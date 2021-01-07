@@ -22,13 +22,6 @@ Parameters:
     Description: Name of KeyPair
     Type: AWS::EC2::KeyPair::KeyName
 
-  AZ1:
-    Description: AvailabilityZone 1
-    Type: AWS::EC2::AvailabilityZone::Name
-  AZ2:
-    Description: AvailabilityZone 2
-    Type: AWS::EC2::AvailabilityZone::Name
-
   VPCCidr:
     Description: Cidr Block for VPC
     Type: String
@@ -65,7 +58,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !Ref PublicSubnet1Cidr
-      AvailabilityZone: !Ref AZ1
+      AvailabilityZone: !Select [ 0, !GetAZs ]
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -75,7 +68,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !Ref PublicSubnet2Cidr
-      AvailabilityZone: !Ref AZ2
+      AvailabilityZone: !Select [ 1, !GetAZs ]
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -85,7 +78,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !Ref PrivateSubnet1Cidr
-      AvailabilityZone: !Ref AZ1
+      AvailabilityZone: !Select [ 0, !GetAZs ]
       Tags:
         - Key: Name
           Value: private1
@@ -94,7 +87,7 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: !Ref PrivateSubnet2Cidr
-      AvailabilityZone: !Ref AZ2
+      AvailabilityZone: !Select [ 1, !GetAZs ]
       Tags:
         - Key: Name
           Value: private2
@@ -125,16 +118,18 @@ Resources:
       RouteTableId: !Ref PublicRT
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref IGW
-  PublicSubnetRTAssociation:
+  PublicSubnet1RTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRT
-      SubnetId: !Ref PublicSubnet1
-  PublicSubnetRTAssociation:
+      SubnetId:
+        !Ref PublicSubnet1
+  PublicSubnet2RTAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRT
-      SubnetId: !Ref PublicSubnet2
+      SubnetId:
+        !Ref PublicSubnet2
 
   SGforWeb:
     Type: AWS::EC2::SecurityGroup
@@ -151,24 +146,15 @@ Resources:
           ToPort: 22
           CidrIp: 0.0.0.0/0
       VpcId: !Ref VPC
-  SGforDB:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: allow webserver
-      GroupName: dbaccess
-      SecurityGroupIngress:
-        - IpProtocol: -1
-          SourceSecurityGroupId : !GetAtt SGforWeb.GroupId
-      VpcId: !Ref VPC
 
   EC2forWeb:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", Linux2 ]
       KeyName: !Ref KeyName
-      AvailabilityZone: !GetAtt PublicSubnet.AvailabilityZone
+      AvailabilityZone: !GetAtt PublicSubnet1.AvailabilityZone
       InstanceType: t3.micro
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !Ref PublicSubnet1
       SecurityGroupIds:
         - !Ref SGforWeb
       UserData:
