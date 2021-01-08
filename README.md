@@ -30,11 +30,15 @@ iam-user-policy : AdministratorAccess 정책 적용한 Policy를 만들어 User�
 
 ***
 
-vpcforASG : Auto Scaling Group 시작하기 전 vpc, ec2 구성
+asg-vpc : Auto Scaling Group 시작하기 전 vpc, ec2 구성
 
 autoscaling : LC + ALB + target group + listener + ASG + ASG policy(CPU)
 
 -- images의 asg 참고
+
+***
+
+webstress.php : 웹에서 서버에 부하를 주고 끄기 위한 php
 
 ***
 
