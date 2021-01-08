@@ -33,7 +33,7 @@ Resources:
   LC:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-091583c712d919bc0
+      ImageId: ami-07a8e5312bb8806ba
       InstanceType: t3.micro
       InstanceMonitoring: true
       KeyName: !Ref Key
@@ -62,7 +62,7 @@ Resources:
       VpcId: !Ref VPC
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /index.html
+      HealthCheckPath: /var/www/html/index.php
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 5
