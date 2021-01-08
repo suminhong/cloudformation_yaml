@@ -5,6 +5,7 @@
 	</head>
 	<body>
 		<?php
+			$PID = exec("pidof stress");
 			$stresskill = $_GET["stress"];
 			if (strlen($stresskill) > 0) {
 				if ($stresskill == "start") {
@@ -12,7 +13,7 @@
 					exec("stress --cpu 4 --io 1 --vm 1 --vm-bytes 128M > /dev/null 2>/dev/null &");
 				} elseif ($stresskill == "stop") {
 					echo("<h2>Killed stress</h2>");
-					exec("kill -9 (pidof stress)");
+					exec("kill -9 $PID");
 				} else {}
 			}
 		?>
