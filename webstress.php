@@ -23,13 +23,13 @@
 					<td>
 						<form action="index.php">
 							<input type="hidden" name="stress" value="start" />
-							<input type="submit" name="Start Stress" />
+							<input type="submit" value="Start Stress" />
 						</form>
 					</td>
 					<td>
 						<form>
 							<input type="hidden" name="stress" value="stop" />
-							<input type="submit" name="Stop Stress" />
+							<input type="submit" value="Stop Stress" />
 						</form>
 					</td>
 				</tr>

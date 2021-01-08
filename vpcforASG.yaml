@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: EC2 for webserver
+Description: EC2 for ASG
 
 Mappings:
   RegionMap: 
@@ -161,10 +161,10 @@ Resources:
         Fn::Base64:
           !Join [ "", [
           "#!/bin/bash\n",
-          "amazon-linux-extras install -y epel"
+          "amazon-linux-extras install -y epel\n",
           "yum install -y httpd php git stress\n",
           "git clone https://github.com/suminhong/cloudformation_yaml.git /cf\n",
-          "mv /cf/index.php /var/www/html/index.php\n",
+          "mv /cf/webstress.php /var/www/html/index.php\n",
           "rm -f /var/www/html/index.html\n",
           "systemctl enable httpd\n",
           "systemctl start httpd\n"] ]
