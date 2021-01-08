@@ -33,8 +33,9 @@ Resources:
   LC:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-07d74f284ab378ced
+      ImageId: ami-085f775d6b8c30c52
       InstanceType: t3.micro
+      InstanceMonitoring: true
       KeyName: !Ref Key
       LaunchConfigurationName: webserverLC
       SecurityGroups:
@@ -54,16 +55,17 @@ Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      VpcId: !Ref VPC
       Name: webtest
       Port: 80
       Protocol: HTTP
       VpcId: !Ref VPC
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /
+      HealthCheckPath: /index.html
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
+      HealthyThresholdCount: 5
       UnhealthyThresholdCount: 2
 
   ALBListener:
@@ -83,7 +85,7 @@ Resources:
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
-      Cooldown: 300
+      Cooldown: 10
       LaunchConfigurationName: !Ref LC
       MaxSize: 4
       MinSize: 2
