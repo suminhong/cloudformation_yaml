@@ -5,12 +5,12 @@
 	</head>
 	<body>
 		<?php
-			$stress = $_GET["stress"];
-			if (strlen($stress) > 0) {
-				if ($stress == "start") {
+			$stresskill = $_GET["stress"];
+			if (strlen($stresskill) > 0) {
+				if ($stresskill == "start") {
 					echo("<h2>Generating Load</h2>");
 					exec("stress --cpu 4 --io 1 --vm 1 --vm-bytes 128M");
-				} elseif ($stress == "stop") {
+				} elseif ($stresskill == "stop") {
 					echo("<h2>Killed stress</h2>");
 					exec("kill -9 (pidof stress)");
 				} else {}
