@@ -161,8 +161,8 @@ Resources:
         Fn::Base64:
           !Join [ "", [
           "#!/bin/bash\n",
-          "#Install apache\n",
-          "yum install -y httpd php git\n",
+          "amazon-linux-extras install -y epel"
+          "yum install -y httpd php git stress\n",
           "git clone https://github.com/suminhong/cloudformation_yaml.git /cf\n",
           "mv /cf/index.php /var/www/html/index.php\n",
           "rm -f /var/www/html/index.html\n",
