@@ -33,7 +33,7 @@ Resources:
   LC:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-07a8e5312bb8806ba
+      ImageId: ami-017459178eade98f5
       InstanceType: t3.micro
       InstanceMonitoring: true
       KeyName: !Ref Key
@@ -105,4 +105,4 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 5
+        TargetValue: 45
