@@ -85,7 +85,7 @@ Resources:
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
-      Cooldown: 1
+      Cooldown: 10
       LaunchConfigurationName: !Ref LC
       MaxSize: 4
       MinSize: 2
@@ -105,4 +105,4 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 2
+        TargetValue: 5
