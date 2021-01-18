@@ -42,4 +42,8 @@ webstress.php : 웹에서 서버에 부하를 주고 끄기 위한 php
 
 ***
 
+VPCforTGW : Transit Gateway 실습 위한 vpc 구성 - main number 설정해주면 그에 맞게 vpc와 ec2들 생성됨 -> 여러 개 생성 
+
+***
+
 자세한 정리 : <http://honglab.tistory.com/category/공부/AWS>
