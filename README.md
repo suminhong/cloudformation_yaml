@@ -48,4 +48,4 @@ VPCforTGW : Transit Gateway 실습 위한 vpc 구성 - main number 설정해주�
 
 ***
 
-자세한 정리 : <http://honglab.tistory.com/category/공부/AWS>
+자세한 정리 : <http://honglab.tistory.com/category/공부/IaC>

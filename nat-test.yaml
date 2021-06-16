@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: VPC, EC2 Configuration For Pivate NAT Test
+Parameters:
+  KeyName:
+    Description: Name of KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+  AMI:
+    Description: AMI of EC2
+    Type: AWS::EC2::Image::Id
+    Default: ami-02af1a55fd4da5ab1
+
+  AZpublic:
+    Description: AvailabilityZone for public
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-2a
+  AZprivate:
+    Description: AvailabilityZone for private
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-2c
+
+
+Resources:
+  VPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: VPC1
+  
+  VPC1PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC1
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Ref AZpublic
+      Tags:
+        - Key: Name
+          Value: VPC1-public-subnet
+  VPC1PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC1
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Ref AZprivate
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: VPC1-private-subnet
+  
+  VPC1PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: VPC1-Public-RT
+  VPC1PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref VPC1PublicRT
+      SubnetId: !Ref VPC1PublicSubnet
+  
+  VPC1PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: VPC1-Private-RT
+  VPC1PrivateSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref VPC1PrivateRT
+      SubnetId: !Ref VPC1PrivateSubnet
+
+
+  VPC2:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: VPC2
+  
+  VPC2PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC2
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Ref AZpublic
+      Tags:
+        - Key: Name
+          Value: VPC2-public-subnet
+  VPC2PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC2
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Ref AZprivate
+      Tags:
+        - Key: Name
+          Value: VPC2-private-subnet
+  
+  VPC2PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC2
+      Tags:
+        - Key: Name
+          Value: VPC2-Public-RT
+  VPC2PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref VPC2PublicRT
+      SubnetId: !Ref VPC2PublicSubnet
+  
+  VPC2PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC2
+      Tags:
+        - Key: Name
+          Value: VPC2-Private-RT
+  VPC2PrivateSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref VPC2PrivateRT
+      SubnetId: !Ref VPC2PrivateSubnet
+
+
+  SGforPrivate:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow 22 from ALL
+      GroupName: VPC1-private-SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: VPC1-private-SG
+
+  SGforPublic:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow ICMP from Private SG
+      GroupName: VPC2-public-SG
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC2
+      Tags:
+        - Key: Name
+          Value: VPC2-public-SG
+
+
+  EC2inVPC1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMI
+      KeyName: !Ref KeyName
+      AvailabilityZone: !Ref AZprivate
+      InstanceType: t3.micro
+      SubnetId: !Ref VPC1PrivateSubnet
+      SecurityGroupIds:
+        - !Ref SGforPrivate
+      Tags:
+        - Key: Name
+          Value: vpc1-private-ec2
+
+  EC2inVPC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMI
+      KeyName: !Ref KeyName
+      AvailabilityZone: !Ref AZpublic
+      InstanceType: t3.micro
+      SubnetId: !Ref VPC2PublicSubnet
+      SecurityGroupIds:
+        - !Ref SGforPublic
+      Tags:
+        - Key: Name
+          Value: vpc2-public-ec2

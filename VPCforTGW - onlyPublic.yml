@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: VPC and EC2 for Transit Gateway
+
+Mappings:
+  RegionMap: 
+    us-east-1:
+      Linux2: ami-0be2609ba883822ec
+    us-east-2:
+      Linux2: ami-0a0ad6b70e61be944
+    us-west-1:
+      Linux2: ami-03130878b60947df3
+    us-west-2:
+      Linux2: ami-0a36eb8fadc976275
+    ap-northeast-1:
+      Linux2: ami-01748a72bed07727c
+    ap-northeast-2:
+      Linux2: ami-0094965d55b3bb1ff
+
+Parameters:
+  KeyName:
+    Description: Name of KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+
+  MainNumber:
+    Description: 0~255
+    Type: Number
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub '10.${MainNumber}.0.0/16'
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${MainNumber} - VPC'
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Sub '10.${MainNumber}.1.0/24'
+      AvailabilityZone: !Select [ 0, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${MainNumber} - Public Subnet'
+
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub 'IGW ${MainNumber}'
+  Attachigw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+
+  PublicRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${MainNumber} - Public RT'
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: Attachigw
+    Properties:
+      RouteTableId: !Ref PublicRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+  PublicSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRT
+      SubnetId: !Ref PublicSubnet
+
+  SGforBastion:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow 22
+      GroupName: !Sub '${MainNumber} - bastionSG'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.0.0.0/8
+      VpcId: !Ref VPC
+
+  EC2forBastion:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", Linux2 ]
+      KeyName: !Ref KeyName
+      AvailabilityZone: !GetAtt PublicSubnet.AvailabilityZone
+      InstanceType: t3.micro
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds:
+        - !Ref SGforBastion
+      Tags:
+        - Key: Name
+          Value: !Sub '${MainNumber} - EC2'

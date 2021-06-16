@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: VPC and EC2 for Transit Gateway
+
+Mappings:
+  RegionMap: 
+    us-east-1:
+      Linux2: ami-0be2609ba883822ec
+    us-east-2:
+      Linux2: ami-0a0ad6b70e61be944
+    us-west-1:
+      Linux2: ami-03130878b60947df3
+    us-west-2:
+      Linux2: ami-0a36eb8fadc976275
+    ap-northeast-1:
+      Linux2: ami-01748a72bed07727c
+    ap-northeast-2:
+      Linux2: ami-0094965d55b3bb1ff
+
+Parameters:
+  KeyName:
+    Description: Name of KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+#####
+# VPC1 (10.0.0.0/16) (Source)
+  VPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub '10.0.0.0/16'
+      Tags:
+        - Key: Name
+          Value: VPC 1
+
+## Source Subnet (10.0.10.0/24) - IGW & Public
+  SourceSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC1
+      CidrBlock: !Sub '10.0.10.0/24'
+      AvailabilityZone: !Select [ 0, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: VPC1 - Source(10.0.10)
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: VPC1 IGW
+  Attachigw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC1
+  SourceRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: VPC1 - SourceRT
+  SourceRoute:
+    Type: AWS::EC2::Route
+    DependsOn: Attachigw
+    Properties:
+      RouteTableId: !Ref SourceRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+  SourceSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref SourceRT
+      SubnetId: !Ref SourceSubnet
+
+### Source SG & EC2
+  SGforSourceEC2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow 22
+      GroupName: SourceEC2SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VPC1
+  SourceEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", Linux2 ]
+      KeyName: !Ref KeyName
+      AvailabilityZone: !GetAtt SourceSubnet.AvailabilityZone
+      InstanceType: t3.micro
+      SubnetId: !Ref SourceSubnet
+      SecurityGroupIds:
+        - !Ref SGforSourceEC2
+      Tags:
+        - Key: Name
+          Value: SourceEC2(10.0.10)
+
+
+## NAT Subnet (10.0.20.0/24) - Nothing
+  NATSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC1
+      CidrBlock: !Sub '10.0.20.0/24'
+      AvailabilityZone: !Select [ 2, !GetAZs ]
+      Tags:
+        - Key: Name
+          Value: VPC1 - NAT(10.0.20)
+  NATRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: VPC1 - NATRT
+  NATSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref SourceRT
+      SubnetId: !Ref SourceSubnet
+
+
+######
+# VPC2 (10.50.0.0/16) (Target)
+  VPC2:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub '10.50.0.0/16'
+      Tags:
+        - Key: Name
+          Value: VPC 2
+
+## Target Subnet (10.50.10.0/24) - Nothing
+  TargetSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC2
+      CidrBlock: !Sub '10.50.10.0/24'
+      AvailabilityZone: !Select [ 0, !GetAZs ]
+      Tags:
+        - Key: Name
+          Value: VPC2 - Target(10.50.10)
+  TargetRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC2
+      Tags:
+        - Key: Name
+          Value: VPC2 - TargetRT
+  TargetSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref TargetRT
+      SubnetId: !Ref TargetSubnet
+
