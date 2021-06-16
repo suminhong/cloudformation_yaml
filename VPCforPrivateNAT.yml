@@ -1,0 +1,280 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Default Configuration for Private NAT Gateway (VPC, EC2, TGW)
+
+Mappings:
+  RegionMap: 
+    us-east-1:
+      Linux2: ami-0be2609ba883822ec
+    us-east-2:
+      Linux2: ami-0a0ad6b70e61be944
+    us-west-1:
+      Linux2: ami-03130878b60947df3
+    us-west-2:
+      Linux2: ami-0a36eb8fadc976275
+    ap-northeast-1:
+      Linux2: ami-01748a72bed07727c
+    ap-northeast-2:
+      Linux2: ami-0094965d55b3bb1ff
+
+Parameters:
+  KeyName:
+    Description: Name of KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+#####
+# VPC1 (10.0.0.0/16) (Source)
+  VPC1:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub '10.0.0.0/16'
+      Tags:
+        - Key: Name
+          Value: VPC 1
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: VPC1 IGW
+  Attachigw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC1
+
+## Source Subnet (10.0.10.0/24) - IGW & Public
+  SourceSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC1
+      CidrBlock: !Sub '10.0.10.0/24'
+      AvailabilityZone: !Select [ 0, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: VPC1 - Source(10.0.10)
+  SourceRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: VPC1 - SourceRT
+  SourceRoutetoIGW:
+    Type: AWS::EC2::Route
+    DependsOn: Attachigw
+    Properties:
+      RouteTableId: !Ref SourceRT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+  SourceSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref SourceRT
+      SubnetId: !Ref SourceSubnet
+
+### Source SG & EC2
+  SGforSourceEC2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow 22 from any
+      GroupName: SourceEC2SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH for any
+      VpcId: !Ref VPC1
+  SourceEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", Linux2 ]
+      KeyName: !Ref KeyName
+      AvailabilityZone: !GetAtt SourceSubnet.AvailabilityZone
+      InstanceType: t3.micro
+      SubnetId: !Ref SourceSubnet
+      SecurityGroupIds:
+        - !Ref SGforSourceEC2
+      Tags:
+        - Key: Name
+          Value: SourceEC2(10.0.10)
+
+
+## NAT Subnet (10.0.20.0/24) - Nothing
+  NATSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC1
+      CidrBlock: !Sub '10.0.20.0/24'
+      AvailabilityZone: !Select [ 2, !GetAZs ]
+      Tags:
+        - Key: Name
+          Value: VPC1 - NAT(10.0.20)
+  NATRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC1
+      Tags:
+        - Key: Name
+          Value: VPC1 - NATRT
+  NATRoutetoVPC2:
+    Type: AWS::EC2::Route
+    DependsOn: TGWAttachVPC1
+    Properties:
+      RouteTableId: !Ref NATRT
+      DestinationCidrBlock: 10.50.0.0/16
+      TransitGatewayId: !Ref TGW
+  NATSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref NATRT
+      SubnetId: !Ref NATSubnet
+
+
+######
+# VPC2 (10.50.0.0/16) (Target)
+  VPC2:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub '10.50.0.0/16'
+      Tags:
+        - Key: Name
+          Value: VPC 2
+
+## Target Subnet (10.50.10.0/24) - Nothing
+  TargetSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC2
+      CidrBlock: !Sub '10.50.10.0/24'
+      AvailabilityZone: !Select [ 0, !GetAZs ]
+      Tags:
+        - Key: Name
+          Value: VPC2 - Target(10.50.10)
+  TargetRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC2
+      Tags:
+        - Key: Name
+          Value: VPC2 - TargetRT
+  TargetRoutetoVPC1:
+    Type: AWS::EC2::Route
+    DependsOn: TGWAttachVPC2
+    Properties:
+      RouteTableId: !Ref TargetRT
+      DestinationCidrBlock: 10.0.0.0/16
+      TransitGatewayId: !Ref TGW
+  TargetSubnetRTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref TargetRT
+      SubnetId: !Ref TargetSubnet
+
+### Target SG & EC2
+  SGforTargetEC2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow icmp from NAT Subnet
+      GroupName: TargetEC2SG
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.0.20.0/24
+          Description: NAT Subnet
+      VpcId: !Ref VPC2
+  TargetEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", Linux2 ]
+      KeyName: !Ref KeyName
+      AvailabilityZone: !GetAtt TargetSubnet.AvailabilityZone
+      InstanceType: t3.micro
+      SubnetId: !Ref TargetSubnet
+      SecurityGroupIds:
+        - !Ref SGforTargetEC2
+      Tags:
+        - Key: Name
+          Value: TargetEC2(10.50.10)
+
+
+#####
+# TGW
+  TGW:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: TGW
+
+  TGWAttachVPC1:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TGW
+      VpcId: !Ref VPC1
+      SubnetIds:
+        - !Ref NATSubnet
+      Tags:
+        - Key: Name
+          Value: VPC1 (10.0.10.0/24)
+
+  TGWAttachVPC2:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties:
+      TransitGatewayId: !Ref TGW
+      VpcId: !Ref VPC2
+      SubnetIds:
+        - !Ref TargetSubnet
+      Tags:
+        - Key: Name
+          Value: VPC2 - Target Subnet (10.50.10.0/24)
+
+
+#####
+# For CloudWatch Logs Insight Query
+  LogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: VPC2
+      RetentionInDays: 1
+
+  FlowLogRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: FlowLogRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: FlowLogPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:DescribeLogGroups'
+                  - 'logs:DescribeLogStreams'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+
+  FlowLogsInVPC2:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceType: VPC
+      ResourceId: !Ref VPC2
+      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
+      LogGroupName: !Ref LogsGroup
+      TrafficType: ALL
+      MaxAggregationInterval: 60
+      LogFormat: '${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}'
